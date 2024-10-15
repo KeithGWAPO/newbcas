@@ -36,15 +36,33 @@ try {
     }
 
     // Handle editing a user
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['editUser'])) {
-        $editUsername = $_POST['edit_username'];
-        $editFirstname = $_POST['edit_firstname'];
-        $editLastname = $_POST['edit_lastname'];
-        $editEmail = $_POST['edit_email'];
-        $editRole = $_POST['edit_role'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['editUser'])) {
+    $editUsername = $_POST['edit_username'];
+    $editFirstname = $_POST['edit_firstname'];
+    $editLastname = $_POST['edit_lastname'];
+    $editEmail = $_POST['edit_email'];
+    $editRole = $_POST['edit_role'];
+    $editPassword = $_POST['edit_password'] ?? null;
 
+    if ($editPassword) {
+        $stmt = $pdo->prepare("UPDATE users SET firstname = ?, lastname = ?, email = ?, role = ?, password = ? WHERE username = ?");
+        $stmt->execute([$editFirstname, $editLastname, $editEmail, $editRole, $editPassword, $editUsername]);
+    } else {
         $stmt = $pdo->prepare("UPDATE users SET firstname = ?, lastname = ?, email = ?, role = ? WHERE username = ?");
         $stmt->execute([$editFirstname, $editLastname, $editEmail, $editRole, $editUsername]);
+    }
+
+    header("Location: admin-management.php"); // Redirect to see updated user list
+    exit();
+}
+
+
+    // Handle deleting a user
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['deleteUser'])) {
+        $deleteUsername = $_POST['delete_username'];
+
+        $stmt = $pdo->prepare("DELETE FROM users WHERE username = ?");
+        $stmt->execute([$deleteUsername]);
 
         header("Location: admin-management.php"); // Redirect to the same page to see updated user list
         exit();
@@ -141,7 +159,7 @@ try {
                                     <button class="btn btn-primary btn-sm edit-btn me-2" data-bs-toggle="modal" data-bs-target="#editUserModal" data-user='{"username":"<?php echo htmlspecialchars($user['username']); ?>","firstname":"<?php echo htmlspecialchars($user['firstname']); ?>","lastname":"<?php echo htmlspecialchars($user['lastname']); ?>","email":"<?php echo htmlspecialchars($user['email']); ?>","role":"<?php echo htmlspecialchars($user['role']); ?>"}'>
                                         <i class="fas fa-edit me-1"></i> Edit
                                     </button>
-                                    <button class="btn btn-danger btn-sm delete-btn" data-username="<?php echo htmlspecialchars($user['username']); ?>">
+                                    <button class="btn btn-danger btn-sm delete-btn" data-username="<?php echo htmlspecialchars($user['username']); ?>" data-bs-toggle="modal" data-bs-target="#deleteUserModal" data-username="<?php echo htmlspecialchars($user['username']); ?>">
                                         <i class="fas fa-trash-alt me-1"></i> Delete
                                     </button>
                                 </td>
@@ -186,9 +204,9 @@ try {
                             </div>
                             <div class="mb-3">
                                 <label for="new-role" class="form-label">Role</label>
-                                <select class="form-select" name="new_role" required>
-                                    <option value="Admin">Admin</option>
-                                    <option value="Staff">Staff</option>
+                                <select class="form-select" name="new_role">
+                                    <option value="staff">Staff</option>
+                                    <option value="admin">Admin</option>
                                 </select>
                             </div>
                         </div>
@@ -209,67 +227,86 @@ try {
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
+                            <input type="hidden" name="edit_username" id="edit_username">
                             <div class="mb-3">
-                                <label for="edit-username" class="form-label">Username</label>
-                                <input type="text" class="form-control" id="edit-username" name="edit_username" readonly>
-                            </div>
+    <label for="edit-password" class="form-label">Password</label>
+    <input type="password" class="form-control" name="edit_password" id="edit_password">
+    <small class="form-text text-muted">Leave blank to keep the current password.</small>
+</div>
+
                             <div class="mb-3">
                                 <label for="edit-firstname" class="form-label">Firstname</label>
-                                <input type="text" class="form-control" id="edit-firstname" name="edit_firstname" required>
+                                <input type="text" class="form-control" name="edit_firstname" id="edit_firstname" required>
                             </div>
                             <div class="mb-3">
                                 <label for="edit-lastname" class="form-label">Lastname</label>
-                                <input type="text" class="form-control" id="edit-lastname" name="edit_lastname" required>
+                                <input type="text" class="form-control" name="edit_lastname" id="edit_lastname" required>
                             </div>
                             <div class="mb-3">
                                 <label for="edit-email" class="form-label">Email</label>
-                                <input type="email" class="form-control" id="edit-email" name="edit_email" required>
+                                <input type="email" class="form-control" name="edit_email" id="edit_email" required>
                             </div>
                             <div class="mb-3">
                                 <label for="edit-role" class="form-label">Role</label>
-                                <select class="form-select" id="edit-role" name="edit_role" required>
-                                    <option value="Admin">Admin</option>
-                                    <option value="Staff">Staff</option>
+                                <select class="form-select" name="edit_role" id="edit_role">
+                                    <option value="staff">Staff</option>
+                                    <option value="admin">Admin</option>
                                 </select>
                             </div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button type="submit" name="editUser" class="btn btn-warning">Save Changes</button>
+                            <button type="submit" name="editUser" class="btn btn-primary">Save Changes</button>
                         </div>
                     </form>
                 </div>
             </div>
 
+            <!-- Delete User Modal -->
+            <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <form method="POST" class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="deleteUserModalLabel">Delete User</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Are you sure you want to delete the user <strong id="delete_username_text"></strong>?</p>
+                            <input type="hidden" name="delete_username" id="delete_username">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" name="deleteUser" class="btn btn-danger">Delete User</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </main>
     </div>
 
-    <!-- Bootstrap JS -->
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Custom JavaScript -->
-    <script>
-        // Fill in the edit modal with user data
-        document.querySelectorAll('.edit-btn').forEach(button => {
-            button.addEventListener('click', () => {
-                const user = JSON.parse(button.getAttribute('data-user'));
-                document.getElementById('edit-username').value = user.username;
-                document.getElementById('edit-firstname').value = user.firstname;
-                document.getElementById('edit-lastname').value = user.lastname;
-                document.getElementById('edit-email').value = user.email;
-                document.getElementById('edit-role').value = user.role;
-            });
-        });
 
-        // Handle delete button click (optional)
-        document.querySelectorAll('.delete-btn').forEach(button => {
-            button.addEventListener('click', () => {
-                const username = button.getAttribute('data-username');
-                if (confirm(`Are you sure you want to delete the user "${username}"?`)) {
-                    // Implement the delete user functionality here
-                    // Use AJAX or form submission to delete the user
-                }
-            });
-        });
-    </script>
+    <script>
+// Populate Edit User Modal with data
+$('.edit-btn').on('click', function() {
+    const userData = $(this).data('user');
+    $('#edit_username').val(userData.username);
+    $('#edit_firstname').val(userData.firstname);
+    $('#edit_lastname').val(userData.lastname);
+    $('#edit_email').val(userData.email);
+    $('#edit_role').val(userData.role);
+});
+
+// Populate Delete User Modal with username
+$('.delete-btn').on('click', function() {
+    const username = $(this).data('username');
+    $('#delete_username_text').text(username);
+    $('#delete_username').val(username);
+});
+</script>
+
 </body>
 </html>
