@@ -1,23 +1,25 @@
-<?php
-session_start(); // Start session to retrieve user data
-$firstname = $_SESSION['firstname'] ?? 'Staff';
-$lastname = $_SESSION['lastname'] ?? 'User';
-?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Barangay Clinic Appointment System</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome for Icons -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="admin-dashboard.css">
-
+    <title>Interactive Calendar</title>
     <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #e9ecef; /* Soft background */
+        }
+
         .calendar {
             width: 100%;
             max-width: 700px;
@@ -29,7 +31,7 @@ $lastname = $_SESSION['lastname'] ?? 'User';
         }
 
         .calendar-header {
-            background-color: #28a745; /* Header color */
+            background-color: #007bff; /* Header color */
             color: white;
             display: flex;
             justify-content: space-between;
@@ -45,7 +47,7 @@ $lastname = $_SESSION['lastname'] ?? 'User';
         }
 
         .calendar-header button {
-            background-color: #155724; /* Button color */
+            background-color: #0056b3; /* Button color */
             border: none;
             color: white;
             padding: 10px 15px;
@@ -56,7 +58,7 @@ $lastname = $_SESSION['lastname'] ?? 'User';
         }
 
         .calendar-header button:hover {
-            background-color: #0a2911; /* Darker on hover */
+            background-color: #004494; /* Darker on hover */
         }
 
         .calendar-body {
@@ -80,7 +82,7 @@ $lastname = $_SESSION['lastname'] ?? 'User';
         }
 
         .calendar-body .day-name {
-            background-color: #28a745; /* Header color */
+            background-color: #007bff; /* Header color */
             color: white;
             font-weight: bold;
             padding: 10px;
@@ -117,95 +119,28 @@ $lastname = $_SESSION['lastname'] ?? 'User';
             background-color: #f1f1f1; /* Highlight on hover */
         }
     </style>
-            
 </head>
 <body>
-    <!-- Header -->
-    <header class="d-flex justify-content-between align-items-center p-3 bg-success text-white">
-        <div class="d-flex align-items-center">
-            <img src="assets/logo.png" alt="Clinic Logo" class="me-3" width="50" height="50">
-            <h1 class="h4 mb-0">Barangay Clinic Appointment System</h1>
+    <div class="calendar">
+        <div class="calendar-header">
+            <h2 id="monthYear"></h2>
+            <div>
+                <button id="prevBtn">&lt; Previous</button>
+                <button id="todayBtn">Today</button>
+                <button id="nextBtn">Next &gt;</button>
+            </div>
         </div>
-        
-<div class="d-flex align-items-center">
-    <img src="assets/profile.jpg" alt="User Profile" class="rounded-circle me-2" width="40" height="40">
-    <span><?php echo "$firstname $lastname"; ?></span>
-</div>
-    </header>
-
-    <!-- Sidebar and Main Content -->
-    <div class="d-flex">
-        <!-- Sidebar -->
-        <nav class="sidebar bg-light p-3" style="min-width: 250px; height: calc(100vh - 70px);">
-            <ul class="nav flex-column">
-                <li class="nav-item mb-2">
-                    <a href="staff-home.php" class="nav-link active">
-                        <i class="fas fa-tachometer-alt me-2"></i>
-                        Home
-                    </a>
-                </li>
-                <li class="nav-item mb-2">
-                    <a href="staff-RegisterPatient.html" class="nav-link">
-                        <i class="fas fa-users-cog me-2"></i>
-                        Register Patient 
-                    </a>
-                </li>
-                <li class="nav-item mb-2">
-                    <a href="staff-ManageAppointment.html" class="nav-link">
-                        <i class="fas fa-chart-line me-2"></i>
-                        Appointments
-                    </a>
-                </li>
-                  <li class="nav-item mb-2">
-                    <a href="staff-PatientRecords.html" class="nav-link">
-                        <i class="fas fa-chart-line me-2"></i>
-                        Patient Records 
-                    </a>
-                </li>
-            </ul>
-
-            <hr>
-            
-            <a href="login.html" class="btn btn-danger w-100">
-                <i class="fas fa-sign-out-alt me-2"></i>
-                Logout
-            </a>
-        </nav>
-
-        <!-- Main Content -->
-        <main class="main-content p-4 w-100">
-
-
-            <!-- Reports Section -->
-            <section class="reports-section mt-5">
-                <div class="calendar">
-                    <div class="calendar-header">
-                        <h2 id="monthYear"></h2>
-                        <div>
-                            <button id="prevBtn">&lt; Previous</button>
-                            <button id="todayBtn">Today</button>
-                            <button id="nextBtn">Next &gt;</button>
-                        </div>
-                    </div>
-                    <div class="calendar-body" id="calendarBody">
-                        <!-- Day Names -->
-                        <div class="day-name">Sun</div>
-                        <div class="day-name">Mon</div>
-                        <div class="day-name">Tue</div>
-                        <div class="day-name">Wed</div>
-                        <div class="day-name">Thu</div>
-                        <div class="day-name">Fri</div>
-                        <div class="day-name">Sat</div>
-                    </div>
-                </div>
-            </section>
-        </main>
+        <div class="calendar-body" id="calendarBody">
+            <!-- Day Names -->
+            <div class="day-name">Sun</div>
+            <div class="day-name">Mon</div>
+            <div class="day-name">Tue</div>
+            <div class="day-name">Wed</div>
+            <div class="day-name">Thu</div>
+            <div class="day-name">Fri</div>
+            <div class="day-name">Sat</div>
+        </div>
     </div>
-
-    <!-- Bootstrap JS and dependencies (Popper.js) -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Custom JS -->
-    <script src="admin-dashboard.js"></script>
 
     <script>
         const monthYear = document.getElementById('monthYear');
@@ -284,6 +219,5 @@ $lastname = $_SESSION['lastname'] ?? 'User';
         // Initial render
         renderCalendar(currentDate);
     </script>
-
 </body>
 </html>

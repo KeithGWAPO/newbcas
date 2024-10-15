@@ -2,6 +2,57 @@
 session_start(); // Start session to retrieve user data
 $firstname = $_SESSION['firstname'] ?? 'Admin';
 $lastname = $_SESSION['lastname'] ?? 'User';
+
+// Database connection parameters
+$host = 'localhost'; // Replace with your host
+$dbname = 'bcas'; // Replace with your database name
+$username = 'root'; // Replace with your database username
+$password = ''; // Replace with your database password
+
+try {
+    // Create a new PDO instance
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    // Fetch users
+    $stmt = $pdo->prepare("SELECT username, firstname, lastname, email, role FROM users");
+    $stmt->execute();
+    $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Handle adding a new user
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['addUser'])) {
+        $newUsername = $_POST['new_username'];
+        $newPassword = $_POST['new_password']; // You may want to hash this
+        $newFirstname = $_POST['new_firstname'];
+        $newLastname = $_POST['new_lastname'];
+        $newEmail = $_POST['new_email'];
+        $newRole = $_POST['new_role'];
+
+        $stmt = $pdo->prepare("INSERT INTO users (username, password, firstname, lastname, email, role) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$newUsername, $newPassword, $newFirstname, $newLastname, $newEmail, $newRole]);
+
+        header("Location: admin-management.php"); // Redirect to the same page to see updated user list
+        exit();
+    }
+
+    // Handle editing a user
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['editUser'])) {
+        $editUsername = $_POST['edit_username'];
+        $editFirstname = $_POST['edit_firstname'];
+        $editLastname = $_POST['edit_lastname'];
+        $editEmail = $_POST['edit_email'];
+        $editRole = $_POST['edit_role'];
+
+        $stmt = $pdo->prepare("UPDATE users SET firstname = ?, lastname = ?, email = ?, role = ? WHERE username = ?");
+        $stmt->execute([$editFirstname, $editLastname, $editEmail, $editRole, $editUsername]);
+
+        header("Location: admin-management.php"); // Redirect to the same page to see updated user list
+        exit();
+    }
+} catch (PDOException $e) {
+    echo "Database connection failed: " . $e->getMessage();
+    exit; // Stop execution if database connection fails
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -78,45 +129,36 @@ $lastname = $_SESSION['lastname'] ?? 'User';
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Example User Rows -->
-                    <tr>
-                        <td>johndoe</td>
-                        <td>John</td>
-                        <td>Doe</td>
-                        <td>johndoe@example.com</td>
-                        <td>Admin</td>
-                        <td>
-                            <button class="btn btn-primary btn-sm edit-btn me-2" data-bs-toggle="modal" data-bs-target="#editUserModal" data-user='{"username":"johndoe","firstname":"John","lastname":"Doe","email":"johndoe@example.com","role":"Admin"}'>
-                                <i class="fas fa-edit me-1"></i> Edit
-                            </button>
-                            <button class="btn btn-danger btn-sm delete-btn" data-username="johndoe">
-                                <i class="fas fa-trash-alt me-1"></i> Delete
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>janedoe</td>
-                        <td>Jane</td>
-                        <td>Doe</td>
-                        <td>janedoe@example.com</td>
-                        <td>Staff</td>
-                        <td>
-                            <button class="btn btn-primary btn-sm edit-btn me-2" data-bs-toggle="modal" data-bs-target="#editUserModal" data-user='{"username":"janedoe","firstname":"Jane","lastname":"Doe","email":"janedoe@example.com","role":"Staff"}'>
-                                <i class="fas fa-edit me-1"></i> Edit
-                            </button>
-                            <button class="btn btn-danger btn-sm delete-btn" data-username="janedoe">
-                                <i class="fas fa-trash-alt me-1"></i> Delete
-                            </button>
-                        </td>
-                    </tr>
-                    <!-- Add more user rows as needed -->
+                    <?php if (count($users) > 0): ?>
+                        <?php foreach ($users as $user): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($user['username']); ?></td>
+                                <td><?php echo htmlspecialchars($user['firstname']); ?></td>
+                                <td><?php echo htmlspecialchars($user['lastname']); ?></td>
+                                <td><?php echo htmlspecialchars($user['email']); ?></td>
+                                <td><?php echo htmlspecialchars($user['role']); ?></td>
+                                <td>
+                                    <button class="btn btn-primary btn-sm edit-btn me-2" data-bs-toggle="modal" data-bs-target="#editUserModal" data-user='{"username":"<?php echo htmlspecialchars($user['username']); ?>","firstname":"<?php echo htmlspecialchars($user['firstname']); ?>","lastname":"<?php echo htmlspecialchars($user['lastname']); ?>","email":"<?php echo htmlspecialchars($user['email']); ?>","role":"<?php echo htmlspecialchars($user['role']); ?>"}'>
+                                        <i class="fas fa-edit me-1"></i> Edit
+                                    </button>
+                                    <button class="btn btn-danger btn-sm delete-btn" data-username="<?php echo htmlspecialchars($user['username']); ?>">
+                                        <i class="fas fa-trash-alt me-1"></i> Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="6" class="text-center">No users found</td>
+                        </tr>
+                    <?php endif; ?>
                 </tbody>
             </table>
 
             <!-- Add User Modal -->
             <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
                 <div class="modal-dialog">
-                    <form id="addUserForm" class="modal-content">
+                    <form method="POST" class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title" id="addUserModalLabel">Add New User</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -124,24 +166,27 @@ $lastname = $_SESSION['lastname'] ?? 'User';
                         <div class="modal-body">
                             <div class="mb-3">
                                 <label for="new-username" class="form-label">Username</label>
-                                <input type="text" class="form-control" id="new-username" required>
+                                <input type="text" class="form-control" name="new_username" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="new-password" class="form-label">Password</label>
+                                <input type="password" class="form-control" name="new_password" required>
                             </div>
                             <div class="mb-3">
                                 <label for="new-firstname" class="form-label">Firstname</label>
-                                <input type="text" class="form-control" id="new-firstname" required>
+                                <input type="text" class="form-control" name="new_firstname" required>
                             </div>
                             <div class="mb-3">
                                 <label for="new-lastname" class="form-label">Lastname</label>
-                                <input type="text" class="form-control" id="new-lastname" required>
+                                <input type="text" class="form-control" name="new_lastname" required>
                             </div>
                             <div class="mb-3">
                                 <label for="new-email" class="form-label">Email</label>
-                                <input type="email" class="form-control" id="new-email" required>
+                                <input type="email" class="form-control" name="new_email" required>
                             </div>
                             <div class="mb-3">
                                 <label for="new-role" class="form-label">Role</label>
-                                <select class="form-select" id="new-role" required>
-                                    <option value="">Select Role</option>
+                                <select class="form-select" name="new_role" required>
                                     <option value="Admin">Admin</option>
                                     <option value="Staff">Staff</option>
                                 </select>
@@ -149,7 +194,7 @@ $lastname = $_SESSION['lastname'] ?? 'User';
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button type="submit" class="btn btn-success">Add User</button>
+                            <button type="submit" name="addUser" class="btn btn-success">Add User</button>
                         </div>
                     </form>
                 </div>
@@ -158,29 +203,31 @@ $lastname = $_SESSION['lastname'] ?? 'User';
             <!-- Edit User Modal -->
             <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
                 <div class="modal-dialog">
-                    <form id="editUserForm" class="modal-content">
+                    <form method="POST" class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title" id="editUserModalLabel">Edit User</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            <input type="hidden" id="edit-username" required>
+                            <div class="mb-3">
+                                <label for="edit-username" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="edit-username" name="edit_username" readonly>
+                            </div>
                             <div class="mb-3">
                                 <label for="edit-firstname" class="form-label">Firstname</label>
-                                <input type="text" class="form-control" id="edit-firstname" required>
+                                <input type="text" class="form-control" id="edit-firstname" name="edit_firstname" required>
                             </div>
                             <div class="mb-3">
                                 <label for="edit-lastname" class="form-label">Lastname</label>
-                                <input type="text" class="form-control" id="edit-lastname" required>
+                                <input type="text" class="form-control" id="edit-lastname" name="edit_lastname" required>
                             </div>
                             <div class="mb-3">
                                 <label for="edit-email" class="form-label">Email</label>
-                                <input type="email" class="form-control" id="edit-email" required>
+                                <input type="email" class="form-control" id="edit-email" name="edit_email" required>
                             </div>
                             <div class="mb-3">
                                 <label for="edit-role" class="form-label">Role</label>
-                                <select class="form-select" id="edit-role" required>
-                                    <option value="">Select Role</option>
+                                <select class="form-select" id="edit-role" name="edit_role" required>
                                     <option value="Admin">Admin</option>
                                     <option value="Staff">Staff</option>
                                 </select>
@@ -188,94 +235,38 @@ $lastname = $_SESSION['lastname'] ?? 'User';
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                            <button type="submit" name="editUser" class="btn btn-warning">Save Changes</button>
                         </div>
                     </form>
                 </div>
             </div>
+
         </main>
     </div>
 
-    <!-- Bootstrap JS Bundle -->
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JavaScript -->
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const addUserForm = document.getElementById('addUserForm');
-            const editUserForm = document.getElementById('editUserForm');
-            const usersTableBody = document.querySelector('.users-table tbody');
-
-            // Add User Functionality
-            addUserForm.addEventListener('submit', function (e) {
-                e.preventDefault();
-                const newUsername = document.getElementById('new-username').value;
-                const newFirstname = document.getElementById('new-firstname').value;
-                const newLastname = document.getElementById('new-lastname').value;
-                const newEmail = document.getElementById('new-email').value;
-                const newRole = document.getElementById('new-role').value;
-
-                // Simulate adding user (replace this with an AJAX call to the server)
-                const newRow = `
-                    <tr>
-                        <td>${newUsername}</td>
-                        <td>${newFirstname}</td>
-                        <td>${newLastname}</td>
-                        <td>${newEmail}</td>
-                        <td>${newRole}</td>
-                        <td>
-                            <button class="btn btn-primary btn-sm edit-btn me-2" data-bs-toggle="modal" data-bs-target="#editUserModal" data-user='{"username":"${newUsername}","firstname":"${newFirstname}","lastname":"${newLastname}","email":"${newEmail}","role":"${newRole}"}'>
-                                <i class="fas fa-edit me-1"></i> Edit
-                            </button>
-                            <button class="btn btn-danger btn-sm delete-btn" data-username="${newUsername}">
-                                <i class="fas fa-trash-alt me-1"></i> Delete
-                            </button>
-                        </td>
-                    </tr>
-                `;
-                usersTableBody.insertAdjacentHTML('beforeend', newRow);
-                addUserForm.reset();
-                $('#addUserModal').modal('hide'); // Hide modal
+        // Fill in the edit modal with user data
+        document.querySelectorAll('.edit-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const user = JSON.parse(button.getAttribute('data-user'));
+                document.getElementById('edit-username').value = user.username;
+                document.getElementById('edit-firstname').value = user.firstname;
+                document.getElementById('edit-lastname').value = user.lastname;
+                document.getElementById('edit-email').value = user.email;
+                document.getElementById('edit-role').value = user.role;
             });
+        });
 
-            // Edit User Functionality
-            usersTableBody.addEventListener('click', function (e) {
-                if (e.target.closest('.edit-btn')) {
-                    const userData = JSON.parse(e.target.closest('.edit-btn').dataset.user);
-                    document.getElementById('edit-username').value = userData.username;
-                    document.getElementById('edit-firstname').value = userData.firstname;
-                    document.getElementById('edit-lastname').value = userData.lastname;
-                    document.getElementById('edit-email').value = userData.email;
-                    document.getElementById('edit-role').value = userData.role;
-                }
-            });
-
-            // Save Changes from Edit User Modal
-            editUserForm.addEventListener('submit', function (e) {
-                e.preventDefault();
-                const username = document.getElementById('edit-username').value;
-                const firstname = document.getElementById('edit-firstname').value;
-                const lastname = document.getElementById('edit-lastname').value;
-                const email = document.getElementById('edit-email').value;
-                const role = document.getElementById('edit-role').value;
-
-                // Simulate updating user (replace this with an AJAX call to the server)
-                const rowToUpdate = [...usersTableBody.querySelectorAll('tr')].find(row => row.cells[0].innerText === username);
-                if (rowToUpdate) {
-                    rowToUpdate.cells[1].innerText = firstname; // Update firstname
-                    rowToUpdate.cells[2].innerText = lastname; // Update lastname
-                    rowToUpdate.cells[3].innerText = email; // Update email
-                    rowToUpdate.cells[4].innerText = role; // Update role
-                }
-                $('#editUserModal').modal('hide'); // Hide modal
-            });
-
-            // Delete User Functionality
-            usersTableBody.addEventListener('click', function (e) {
-                if (e.target.closest('.delete-btn')) {
-                    const username = e.target.closest('.delete-btn').dataset.username;
-                    const rowToDelete = [...usersTableBody.querySelectorAll('tr')].find(row => row.cells[0].innerText === username);
-                    if (rowToDelete) {
-                        usersTableBody.removeChild(rowToDelete);
-                    }
+        // Handle delete button click (optional)
+        document.querySelectorAll('.delete-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const username = button.getAttribute('data-username');
+                if (confirm(`Are you sure you want to delete the user "${username}"?`)) {
+                    // Implement the delete user functionality here
+                    // Use AJAX or form submission to delete the user
                 }
             });
         });
